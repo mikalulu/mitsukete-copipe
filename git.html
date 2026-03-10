@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git CLI MITSUKETE++COPIPE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap');
+  :root { --bg:#0a0c0f; --panel:#0f1318; --border:#1e2530; --text:#c8d0dc; --dim:#5a6478; --accent:#f05033; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;padding:16px;min-height:100vh;}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  h1{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:4px;color:#f05033;text-transform:uppercase;white-space:nowrap;}
+  .search-wrap{flex:1;position:relative;}
+  .search-wrap input{width:100%;background:#0f1318;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px 6px 28px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:#f05033;}
+  .search-wrap::before{content:'⌕';position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:14px;pointer-events:none;}
+  .no-results{color:var(--dim);padding:40px;text-align:center;display:none;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .section{background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .section.hidden{display:none;}
+  .section-header{padding:8px 14px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;}
+  .section:nth-child(1)  .section-header{background:rgba(240,80,51,.08);color:#f05033;border-bottom:1px solid rgba(240,80,51,.2);}
+  .section:nth-child(2)  .section-header{background:rgba(0,212,170,.08);color:#00d4aa;border-bottom:1px solid rgba(0,212,170,.2);}
+  .section:nth-child(3)  .section-header{background:rgba(123,140,222,.08);color:#7b8cde;border-bottom:1px solid rgba(123,140,222,.2);}
+  .section:nth-child(4)  .section-header{background:rgba(232,197,71,.08);color:#e8c547;border-bottom:1px solid rgba(232,197,71,.2);}
+  .section:nth-child(5)  .section-header{background:rgba(180,100,255,.08);color:#b464ff;border-bottom:1px solid rgba(180,100,255,.2);}
+  .section:nth-child(6)  .section-header{background:rgba(0,180,255,.08);color:#00b4ff;border-bottom:1px solid rgba(0,180,255,.2);}
+  .section:nth-child(7)  .section-header{background:rgba(255,200,0,.08);color:#ffc800;border-bottom:1px solid rgba(255,200,0,.2);}
+  .section:nth-child(8)  .section-header{background:rgba(80,220,120,.08);color:#50dc78;border-bottom:1px solid rgba(80,220,120,.2);}
+  .section:nth-child(9)  .section-header{background:rgba(255,80,160,.08);color:#ff50a0;border-bottom:1px solid rgba(255,80,160,.2);}
+  .section:nth-child(10) .section-header{background:rgba(255,107,53,.06);color:#ff6b35;border-bottom:1px solid rgba(255,107,53,.15);}
+  .section-body{padding:10px 0;}
+  .group{margin-bottom:10px;}
+  .group.hidden{display:none;}
+  .group-label{color:var(--dim);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:0 14px 4px;}
+  .divider{height:1px;background:var(--border);margin:6px 14px;}
+  .cmd{padding:3px 14px;transition:background .1s;cursor:default;}
+  .cmd:hover{background:rgba(255,255,255,.04);}
+  .cmd.has-vars{cursor:pointer;}
+  .cmd.expanded{background:rgba(255,255,255,.03);}
+  .cmd.hidden{display:none;}
+  .cmd-row{display:flex;align-items:flex-start;gap:8px;}
+  .cmd-text{flex:1;color:#e0e8f0;word-break:break-all;white-space:pre-wrap;}
+  .cmd-text .var{color:#ff6b35;border-bottom:1px dashed rgba(255,107,53,.4);}
+  .cmd-text .flag{color:#7b8cde;}
+  .cmd-text mark{background:rgba(232,197,71,.25);color:#e8c547;border-radius:2px;}
+  .cmd-note{color:var(--dim);font-size:10px;min-width:130px;text-align:right;padding-top:1px;flex-shrink:0;}
+  .copy-btn{background:none;border:none;color:var(--dim);cursor:pointer;padding:0 2px;font-size:11px;transition:color .15s;flex-shrink:0;}
+  .copy-btn:hover{color:#f05033;}
+  .copy-btn.copied{color:#f05033;}
+  .var-form{display:none;margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.3);border-radius:4px;border:1px solid var(--border);}
+  .cmd.expanded .var-form{display:block;}
+  .var-fields{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .var-field{display:flex;align-items:center;gap:4px;}
+  .var-label{color:#ff6b35;font-size:11px;white-space:nowrap;}
+  .var-input{background:#0a0c0f;border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 6px;width:120px;outline:none;transition:border-color .15s;}
+  .var-input:focus{border-color:#ff6b35;}
+  .var-paste-btn{background:none;border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;font-size:10px;padding:2px 5px;transition:all .15s;}
+  .var-paste-btn:hover{border-color:#f05033;color:#f05033;}
+  .form-actions{display:flex;gap:6px;align-items:center;}
+  .form-copy-btn{background:rgba(240,80,51,.1);border:1px solid rgba(240,80,51,.3);border-radius:3px;color:#f05033;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 10px;transition:all .15s;}
+  .form-copy-btn:hover{background:rgba(240,80,51,.2);}
+  .form-copy-btn.copied{background:rgba(240,80,51,.2);color:#fff;}
+  .form-reset-btn{background:none;border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;font-size:11px;padding:4px 8px;transition:all .15s;}
+  .form-reset-btn:hover{border-color:var(--dim);color:var(--text);}
+  .preview-text{flex:1;color:var(--dim);font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Git CLI MITSUKETE++COPIPE</h1>
+  <div class="search-wrap"><input type="text" id="search" placeholder="コマンド・注釈・セクションを検索..." autocomplete="off" spellcheck="false"></div>
+</div>
+<div class="no-results" id="noResults">一致するコマンドが見つかりません</div>
+<div class="grid" id="grid"></div>
+<script>
+const data = [
+  { name: "CONFIG", groups: [
+    { label: "User / Identity", cmds: [
+      { cmd: "git config --global user.name \"<NAME>\"", note: "ユーザ名設定" },
+      { cmd: "git config --global user.email \"<EMAIL>\"", note: "メール設定" },
+      { cmd: "git config --global core.editor <EDITOR>", note: "エディタ変更" },
+      { cmd: "git config --global init.defaultBranch main", note: "デフォルトブランチ名" },
+      { cmd: "git config --list --show-origin", note: "全設定+ファイル元" },
+    ]},
+    { label: "Alias", cmds: [
+      { cmd: "git config --global alias.co checkout", note: "alias: co→checkout" },
+      { cmd: "git config --global alias.br branch", note: "alias: br→branch" },
+      { cmd: "git config --global alias.st status", note: "alias: st→status" },
+      { cmd: "git config --global alias.lg \"log --oneline --graph --decorate\"", note: "alias: lg→log graph" },
+    ]},
+    { label: "Credential / SSH", cmds: [
+      { cmd: "git config --global credential.helper cache", note: "認証情報キャッシュ" },
+      { cmd: "git config --global credential.helper 'cache --timeout=3600'", note: "キャッシュ1時間" },
+      { cmd: "ssh-keygen -t ed25519 -C \"<EMAIL>\"", note: "SSH鍵生成(Ed25519)" },
+      { cmd: "ssh -T git@github.com", note: "GitHub SSH接続テスト" },
+    ]},
+  ]},
+  { name: "INIT / CLONE", groups: [
+    { label: "Repository 作成", cmds: [
+      { cmd: "git init", note: "カレントDirをリポジトリ化" },
+      { cmd: "git init <DIR>", note: "新規Dir作成+初期化" },
+      { cmd: "git init --bare <DIR>.git", note: "bareリポジトリ作成" },
+    ]},
+    { label: "Clone", cmds: [
+      { cmd: "git clone <URL>", note: "リポジトリ複製" },
+      { cmd: "git clone <URL> <DIR>", note: "Dir名指定clone" },
+      { cmd: "git clone --depth 1 <URL>", note: "shallow clone(最新のみ)" },
+      { cmd: "git clone --branch <BRANCH> <URL>", note: "ブランチ指定clone" },
+      { cmd: "git clone --recurse-submodules <URL>", note: "submodule含めclone" },
+    ]},
+  ]},
+  { name: "STAGE / COMMIT", groups: [
+    { label: "Staging", cmds: [
+      { cmd: "git add <FILE>", note: "ファイル追加" },
+      { cmd: "git add .", note: "全変更を追加" },
+      { cmd: "git add -p", note: "対話的にhunk選択" },
+      { cmd: "git add -u", note: "追跡済みファイルのみ" },
+      { cmd: "git reset HEAD <FILE>", note: "ステージ取り消し" },
+      { cmd: "git rm --cached <FILE>", note: "追跡解除(ファイル残す)" },
+    ]},
+    { label: "Commit", cmds: [
+      { cmd: "git commit -m \"<MSG>\"", note: "コミット" },
+      { cmd: "git commit -am \"<MSG>\"", note: "add+commit(追跡済み)" },
+      { cmd: "git commit --amend", note: "直前コミット修正" },
+      { cmd: "git commit --amend --no-edit", note: "メッセージ変えず修正" },
+      { cmd: "git commit --allow-empty -m \"<MSG>\"", note: "空コミット(CI用等)" },
+    ]},
+    { label: "Status / Diff", cmds: [
+      { cmd: "git status", note: "作業ツリー状態" },
+      { cmd: "git status -s", note: "短縮表示" },
+      { cmd: "git diff", note: "unstaged差分" },
+      { cmd: "git diff --staged", note: "staged差分" },
+      { cmd: "git diff <BRANCH1>..<BRANCH2>", note: "ブランチ間差分" },
+      { cmd: "git diff --stat", note: "ファイル単位統計" },
+    ]},
+  ]},
+  { name: "BRANCH", groups: [
+    { label: "Branch 操作", cmds: [
+      { cmd: "git branch", note: "ローカルブランチ一覧" },
+      { cmd: "git branch -a", note: "全ブランチ一覧" },
+      { cmd: "git branch <BRANCH>", note: "ブランチ作成" },
+      { cmd: "git branch -d <BRANCH>", note: "ブランチ削除(マージ済み)" },
+      { cmd: "git branch -D <BRANCH>", note: "ブランチ強制削除" },
+      { cmd: "git branch -m <OLD> <NEW>", note: "ブランチ名変更" },
+    ]},
+    { label: "Switch / Checkout", cmds: [
+      { cmd: "git switch <BRANCH>", note: "ブランチ切替" },
+      { cmd: "git switch -c <BRANCH>", note: "新規作成+切替" },
+      { cmd: "git checkout <BRANCH>", note: "ブランチ切替(従来)" },
+      { cmd: "git checkout -b <BRANCH>", note: "新規作成+切替(従来)" },
+    ]},
+    { label: "Merge / Rebase", cmds: [
+      { cmd: "git merge <BRANCH>", note: "現在ブランチにマージ" },
+      { cmd: "git merge --no-ff <BRANCH>", note: "fast-forward無効でマージ" },
+      { cmd: "git merge --squash <BRANCH>", note: "squashマージ" },
+      { cmd: "git merge --abort", note: "マージ中止" },
+      { cmd: "git rebase <BRANCH>", note: "リベース" },
+      { cmd: "git rebase -i HEAD~<N>", note: "対話的リベース(直近N)" },
+      { cmd: "git rebase --abort", note: "リベース中止" },
+      { cmd: "git rebase --continue", note: "コンフリクト解消後続行" },
+    ]},
+  ]},
+  { name: "REMOTE", groups: [
+    { label: "Remote 管理", cmds: [
+      { cmd: "git remote -v", note: "リモート一覧(URL付き)" },
+      { cmd: "git remote add <NAME> <URL>", note: "リモート追加" },
+      { cmd: "git remote remove <NAME>", note: "リモート削除" },
+      { cmd: "git remote set-url <NAME> <URL>", note: "URL変更" },
+      { cmd: "git remote show <NAME>", note: "リモート詳細情報" },
+    ]},
+    { label: "Fetch / Pull / Push", cmds: [
+      { cmd: "git fetch", note: "全リモート取得" },
+      { cmd: "git fetch <REMOTE>", note: "リモート指定fetch" },
+      { cmd: "git fetch --prune", note: "削除済みブランチ反映" },
+      { cmd: "git pull", note: "fetch+merge" },
+      { cmd: "git pull --rebase", note: "fetch+rebase" },
+      { cmd: "git push", note: "プッシュ" },
+      { cmd: "git push -u <REMOTE> <BRANCH>", note: "upstream設定+push" },
+      { cmd: "git push --force-with-lease", note: "安全な強制push" },
+      { cmd: "git push <REMOTE> --delete <BRANCH>", note: "リモートブランチ削除" },
+    ]},
+  ]},
+  { name: "LOG / HISTORY", groups: [
+    { label: "Log 表示", cmds: [
+      { cmd: "git log", note: "コミット履歴" },
+      { cmd: "git log --oneline", note: "1行表示" },
+      { cmd: "git log --oneline --graph --all", note: "全ブランチグラフ表示" },
+      { cmd: "git log --oneline -n <N>", note: "直近N件" },
+      { cmd: "git log --author=\"<NAME>\"", note: "著者フィルタ" },
+      { cmd: "git log --since=\"<DATE>\" --until=\"<DATE>\"", note: "期間指定" },
+      { cmd: "git log --grep=\"<PATTERN>\"", note: "メッセージ検索" },
+      { cmd: "git log -p <FILE>", note: "ファイルの変更履歴" },
+      { cmd: "git log --stat", note: "変更統計付き" },
+    ]},
+    { label: "Blame / Reflog", cmds: [
+      { cmd: "git blame <FILE>", note: "行ごとの最終変更者" },
+      { cmd: "git blame -L <START>,<END> <FILE>", note: "行範囲指定blame" },
+      { cmd: "git reflog", note: "HEAD移動履歴" },
+      { cmd: "git reflog show <BRANCH>", note: "ブランチのreflog" },
+      { cmd: "git show <COMMIT>", note: "コミット詳細" },
+      { cmd: "git shortlog -sn", note: "著者別コミット数" },
+    ]},
+  ]},
+  { name: "STASH", groups: [
+    { label: "Stash 操作", cmds: [
+      { cmd: "git stash", note: "変更を退避" },
+      { cmd: "git stash push -m \"<MSG>\"", note: "メッセージ付き退避" },
+      { cmd: "git stash push <FILE>", note: "ファイル指定stash" },
+      { cmd: "git stash --include-untracked", note: "未追跡も含めて退避" },
+      { cmd: "git stash list", note: "stash一覧" },
+      { cmd: "git stash show -p stash@{<N>}", note: "stash内容の差分表示" },
+      { cmd: "git stash pop", note: "復元+stash削除" },
+      { cmd: "git stash apply stash@{<N>}", note: "復元(stash残す)" },
+      { cmd: "git stash drop stash@{<N>}", note: "stash削除" },
+      { cmd: "git stash clear", note: "全stash削除" },
+    ]},
+  ]},
+  { name: "TAG", groups: [
+    { label: "Tag 操作", cmds: [
+      { cmd: "git tag", note: "タグ一覧" },
+      { cmd: "git tag <TAG>", note: "軽量タグ作成" },
+      { cmd: "git tag -a <TAG> -m \"<MSG>\"", note: "注釈付きタグ作成" },
+      { cmd: "git tag -a <TAG> <COMMIT>", note: "過去コミットにタグ" },
+      { cmd: "git tag -d <TAG>", note: "ローカルタグ削除" },
+      { cmd: "git push origin <TAG>", note: "タグをリモートに" },
+      { cmd: "git push origin --tags", note: "全タグをpush" },
+      { cmd: "git push origin --delete <TAG>", note: "リモートタグ削除" },
+      { cmd: "git show <TAG>", note: "タグ詳細" },
+    ]},
+  ]},
+  { name: "UNDO / RESET", groups: [
+    { label: "Reset", cmds: [
+      { cmd: "git reset --soft HEAD~1", note: "直前コミット取消(staged残す)" },
+      { cmd: "git reset --mixed HEAD~1", note: "直前コミット取消(unstaged)" },
+      { cmd: "git reset --hard HEAD~1", note: "直前コミット完全取消" },
+      { cmd: "git reset --hard <COMMIT>", note: "指定コミットまで巻き戻し" },
+    ]},
+    { label: "Revert / Restore", cmds: [
+      { cmd: "git revert <COMMIT>", note: "打ち消しコミット" },
+      { cmd: "git revert --no-commit <COMMIT>", note: "打ち消し(コミットせず)" },
+      { cmd: "git restore <FILE>", note: "作業ツリーを元に戻す" },
+      { cmd: "git restore --staged <FILE>", note: "ステージ取り消し" },
+      { cmd: "git checkout -- <FILE>", note: "作業ツリー復元(従来)" },
+    ]},
+    { label: "Clean", cmds: [
+      { cmd: "git clean -n", note: "未追跡ファイル確認(dry-run)" },
+      { cmd: "git clean -fd", note: "未追跡ファイル+Dir削除" },
+      { cmd: "git clean -fdx", note: ".gitignore対象も含め削除" },
+    ]},
+  ]},
+  { name: "ADVANCED", groups: [
+    { label: "Cherry-pick", cmds: [
+      { cmd: "git cherry-pick <COMMIT>", note: "コミット取り込み" },
+      { cmd: "git cherry-pick --no-commit <COMMIT>", note: "取り込み(コミットせず)" },
+      { cmd: "git cherry-pick <START>..<END>", note: "範囲cherry-pick" },
+      { cmd: "git cherry-pick --abort", note: "cherry-pick中止" },
+    ]},
+    { label: "Bisect", cmds: [
+      { cmd: "git bisect start", note: "二分探索開始" },
+      { cmd: "git bisect bad", note: "現在コミット=bad" },
+      { cmd: "git bisect good <COMMIT>", note: "正常コミット指定" },
+      { cmd: "git bisect reset", note: "bisect終了" },
+    ]},
+    { label: "Submodule", cmds: [
+      { cmd: "git submodule add <URL> <PATH>", note: "submodule追加" },
+      { cmd: "git submodule init", note: "submodule初期化" },
+      { cmd: "git submodule update --init --recursive", note: "全submodule取得" },
+      { cmd: "git submodule foreach git pull origin main", note: "全submodule更新" },
+      { cmd: "git submodule deinit <PATH>", note: "submodule解除" },
+    ]},
+    { label: "Worktree / その他", cmds: [
+      { cmd: "git worktree add <PATH> <BRANCH>", note: "別Dirでブランチ展開" },
+      { cmd: "git worktree list", note: "worktree一覧" },
+      { cmd: "git worktree remove <PATH>", note: "worktree削除" },
+      { cmd: "git archive --format=zip HEAD -o <FILE>.zip", note: "HEADをZIPアーカイブ" },
+      { cmd: "git gc --aggressive --prune=now", note: "ガベージコレクション" },
+    ]},
+  ]},
+];
+
+// ── helpers ──────────────────────────────────────────────
+function extractVarTokens(cmd) {
+  const counts = {};
+  return [...cmd.matchAll(/<([^>\n]+)>/g)].map(m => {
+    const name = m[1];
+    counts[name] = (counts[name] || 0);
+    return { name, idx: counts[name]++ };
+  });
+}
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function renderCmdText(raw, query) {
+  let s = escHtml(raw);
+  s = s.replace(/(&lt;)([^&\n]+)(&gt;)/g, (_, a, v, b) => `${a}<span class="var">${v}</span>${b}`);
+  s = s.replace(/(^|\s)(--?[\w-]+)/g, (_m,p1,p2) => p1 + `<span class="flag">${p2}</span>`);
+  if (query) {
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    s = s.replace(re, '<mark>$1</mark>');
+  }
+  return s;
+}
+function buildVarForm(rawCmd) {
+  const tokens = extractVarTokens(rawCmd);
+  if (!tokens.length) return null;
+  const form = document.createElement('div'); form.className = 'var-form';
+  const fields = document.createElement('div'); fields.className = 'var-fields';
+  const inputs = {};
+  tokens.forEach(({ name, idx }) => {
+    const key = `${name}::${idx}`;
+    const cnt = tokens.filter(t => t.name === name).length;
+    const label = cnt > 1 ? `<${name}> ${idx+1}` : `<${name}>`;
+    const wrap = document.createElement('div'); wrap.className = 'var-field';
+    const lbl = document.createElement('span'); lbl.className = 'var-label'; lbl.textContent = label;
+    const inp = document.createElement('input'); inp.className = 'var-input'; inp.placeholder = name; inp.autocomplete = 'off'; inp.spellcheck = false;
+    inputs[key] = inp;
+    const paste = document.createElement('button'); paste.className = 'var-paste-btn'; paste.textContent = '📋'; paste.title = 'クリップボードから貼り付け';
+    paste.addEventListener('click', async e => {
+      e.stopPropagation();
+      try { inp.value = (await navigator.clipboard.readText()).trim(); inp.dispatchEvent(new Event('input')); } catch { inp.focus(); }
+    });
+    wrap.appendChild(lbl); wrap.appendChild(inp); wrap.appendChild(paste);
+    fields.appendChild(wrap);
+  });
+  const actions = document.createElement('div'); actions.className = 'form-actions';
+  const preview = document.createElement('span'); preview.className = 'preview-text';
+  const copyBtn = document.createElement('button'); copyBtn.className = 'form-copy-btn'; copyBtn.textContent = 'コピー';
+  const resetBtn = document.createElement('button'); resetBtn.className = 'form-reset-btn'; resetBtn.textContent = 'リセット';
+  function buildResult() {
+    const c = {};
+    return rawCmd.replace(/<([^>\n]+)>/g, (_, name) => {
+      c[name] = (c[name]||0);
+      const val = (inputs[`${name}::${c[name]++}`]||{}).value?.trim();
+      return val || `<${name}>`;
+    });
+  }
+  function updatePreview() { preview.textContent = buildResult(); }
+  Object.values(inputs).forEach(i => i.addEventListener('input', updatePreview));
+  updatePreview();
+  copyBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(buildResult()).then(() => {
+      copyBtn.textContent = '✓ コピー済'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'コピー'; copyBtn.classList.remove('copied'); }, 1200);
+    });
+  });
+  resetBtn.addEventListener('click', e => { e.stopPropagation(); Object.values(inputs).forEach(i => i.value=''); updatePreview(); });
+  actions.appendChild(preview); actions.appendChild(resetBtn); actions.appendChild(copyBtn);
+  form.addEventListener('click', e => e.stopPropagation());
+  form.addEventListener('mousedown', e => e.stopPropagation());
+  form.appendChild(fields); form.appendChild(actions);
+  return form;
+}
+
+// ── render ────────────────────────────────────────────────
+const grid = document.getElementById('grid');
+const allCmdEls = [];
+data.forEach((section, si) => {
+  const secEl = document.createElement('div'); secEl.className = 'section';
+  secEl.innerHTML = `<div class="section-header">${section.name}</div>`;
+  const body = document.createElement('div'); body.className = 'section-body';
+  section.groups.forEach((g, gi) => {
+    if (gi > 0) { const d = document.createElement('div'); d.className = 'divider'; body.appendChild(d); }
+    const groupEl = document.createElement('div'); groupEl.className = 'group';
+    groupEl.innerHTML = `<div class="group-label">${g.label}</div>`;
+    g.cmds.forEach(c => {
+      const cmdEl = document.createElement('div'); cmdEl.className = 'cmd';
+      const hasVars = extractVarTokens(c.cmd).length > 0;
+      if (hasVars) cmdEl.classList.add('has-vars');
+      const row = document.createElement('div'); row.className = 'cmd-row';
+      const txtEl = document.createElement('div'); txtEl.className = 'cmd-text'; txtEl.innerHTML = renderCmdText(c.cmd, '');
+      const noteEl = document.createElement('div'); noteEl.className = 'cmd-note'; noteEl.textContent = c.note;
+      const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.textContent = '⎘'; copyBtn.title = 'コピー';
+      row.appendChild(txtEl); row.appendChild(noteEl); row.appendChild(copyBtn);
+      cmdEl.appendChild(row);
+      if (hasVars) {
+        cmdEl.appendChild(buildVarForm(c.cmd));
+        cmdEl.addEventListener('click', e => { if (e.target === copyBtn) return; cmdEl.classList.toggle('expanded'); });
+      }
+      copyBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(c.cmd).then(() => {
+          copyBtn.textContent = '✓'; copyBtn.classList.add('copied');
+          setTimeout(() => { copyBtn.textContent = '⎘'; copyBtn.classList.remove('copied'); }, 1200);
+        });
+      });
+      groupEl.appendChild(cmdEl);
+      allCmdEls.push({ el: cmdEl, rawCmd: c.cmd, rawNote: c.note, txtEl });
+    });
+    body.appendChild(groupEl);
+  });
+  secEl.appendChild(body); grid.appendChild(secEl);
+});
+
+// ── search ────────────────────────────────────────────────
+const searchInput = document.getElementById('search');
+const noResults = document.getElementById('noResults');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  allCmdEls.forEach(({ el, rawCmd, rawNote, txtEl }) => {
+    if (!q) { el.classList.remove('hidden'); txtEl.innerHTML = renderCmdText(rawCmd, ''); return; }
+    const match = rawCmd.toLowerCase().includes(q) || rawNote.toLowerCase().includes(q);
+    el.classList.toggle('hidden', !match);
+    txtEl.innerHTML = renderCmdText(rawCmd, match ? q : '');
+  });
+  document.querySelectorAll('.group').forEach(g => g.classList.toggle('hidden', ![...g.querySelectorAll('.cmd')].some(c => !c.classList.contains('hidden'))));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('hidden', ![...s.querySelectorAll('.cmd')].some(c => !c.classList.contains('hidden'))));
+  noResults.style.display = [...document.querySelectorAll('.section')].some(s => !s.classList.contains('hidden')) ? 'none' : 'block';
+});
+</script>
+</body>
+</html>

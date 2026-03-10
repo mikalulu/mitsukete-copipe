@@ -180,6 +180,14 @@
       --c: #00b4ff;
     }
 
+    .card-git {
+      --c: #f05033;
+    }
+
+    .card-sql {
+      --c: #e8c547;
+    }
+
     .card::before {
       background: radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--c) 8%, transparent), transparent 70%);
     }
@@ -406,15 +414,47 @@
         </div>
         <span class="card-arrow">↗</span>
       </a>
+
+      <a class="card card-git" href="git.html">
+        <div class="card-orb"></div>
+        <span class="card-icon">🐙</span>
+        <div class="card-title">Git</div>
+        <p class="card-desc">config · branch · merge · rebase<br>stash · tag · cherry-pick · submodule</p>
+        <div class="card-tags">
+          <span class="tag">BRANCH</span>
+          <span class="tag">MERGE</span>
+          <span class="tag">REBASE</span>
+          <span class="tag">STASH</span>
+          <span class="tag">REMOTE</span>
+          <span class="tag">LOG</span>
+        </div>
+        <span class="card-arrow">↗</span>
+      </a>
+
+      <a class="card card-sql" href="sql.html">
+        <div class="card-orb"></div>
+        <span class="card-icon">🗃️</span>
+        <div class="card-title">SQL</div>
+        <p class="card-desc">SELECT · JOIN · GROUP BY · CTE<br>DDL · INDEX · mysqldump · pg_dump</p>
+        <div class="card-tags">
+          <span class="tag">SELECT</span>
+          <span class="tag">JOIN</span>
+          <span class="tag">DDL</span>
+          <span class="tag">INDEX</span>
+          <span class="tag">MYSQL</span>
+          <span class="tag">PG</span>
+        </div>
+        <span class="card-arrow">↗</span>
+      </a>
     </div>
 
     <div class="stats">
       <div class="stat">
-        <div class="stat-num" id="sn-sheets">4</div>
+        <div class="stat-num" id="sn-sheets">6</div>
         <div class="stat-label">Cheatsheets</div>
       </div>
       <div class="stat">
-        <div class="stat-num" id="sn-sections">36</div>
+        <div class="stat-num" id="sn-sections">56</div>
         <div class="stat-label">Sections</div>
       </div>
       <div class="stat">
@@ -530,8 +570,8 @@
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (e.isIntersecting) {
-          animCount(document.getElementById('sn-sheets'), 4);
-          animCount(document.getElementById('sn-sections'), 36);
+          animCount(document.getElementById('sn-sheets'), 6);
+          animCount(document.getElementById('sn-sections'), 56);
           io.disconnect();
         }
       });

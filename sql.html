@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL MITSUKETE++COPIPE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap');
+  :root { --bg:#0a0c0f; --panel:#0f1318; --border:#1e2530; --text:#c8d0dc; --dim:#5a6478; --accent:#e8c547; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;padding:16px;min-height:100vh;}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  h1{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:4px;color:#e8c547;text-transform:uppercase;white-space:nowrap;}
+  .search-wrap{flex:1;position:relative;}
+  .search-wrap input{width:100%;background:#0f1318;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px 6px 28px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:#e8c547;}
+  .search-wrap::before{content:'⌕';position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:14px;pointer-events:none;}
+  .no-results{color:var(--dim);padding:40px;text-align:center;display:none;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .section{background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .section.hidden{display:none;}
+  .section-header{padding:8px 14px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;}
+  .section:nth-child(1)  .section-header{background:rgba(232,197,71,.08);color:#e8c547;border-bottom:1px solid rgba(232,197,71,.2);}
+  .section:nth-child(2)  .section-header{background:rgba(0,212,170,.08);color:#00d4aa;border-bottom:1px solid rgba(0,212,170,.2);}
+  .section:nth-child(3)  .section-header{background:rgba(123,140,222,.08);color:#7b8cde;border-bottom:1px solid rgba(123,140,222,.2);}
+  .section:nth-child(4)  .section-header{background:rgba(240,80,51,.08);color:#f05033;border-bottom:1px solid rgba(240,80,51,.2);}
+  .section:nth-child(5)  .section-header{background:rgba(180,100,255,.08);color:#b464ff;border-bottom:1px solid rgba(180,100,255,.2);}
+  .section:nth-child(6)  .section-header{background:rgba(0,180,255,.08);color:#00b4ff;border-bottom:1px solid rgba(0,180,255,.2);}
+  .section:nth-child(7)  .section-header{background:rgba(255,200,0,.08);color:#ffc800;border-bottom:1px solid rgba(255,200,0,.2);}
+  .section:nth-child(8)  .section-header{background:rgba(80,220,120,.08);color:#50dc78;border-bottom:1px solid rgba(80,220,120,.2);}
+  .section:nth-child(9)  .section-header{background:rgba(255,80,160,.08);color:#ff50a0;border-bottom:1px solid rgba(255,80,160,.2);}
+  .section:nth-child(10) .section-header{background:rgba(255,107,53,.06);color:#ff6b35;border-bottom:1px solid rgba(255,107,53,.15);}
+  .section-body{padding:10px 0;}
+  .group{margin-bottom:10px;}
+  .group.hidden{display:none;}
+  .group-label{color:var(--dim);font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:0 14px 4px;}
+  .divider{height:1px;background:var(--border);margin:6px 14px;}
+  .cmd{padding:3px 14px;transition:background .1s;cursor:default;}
+  .cmd:hover{background:rgba(255,255,255,.04);}
+  .cmd.has-vars{cursor:pointer;}
+  .cmd.expanded{background:rgba(255,255,255,.03);}
+  .cmd.hidden{display:none;}
+  .cmd-row{display:flex;align-items:flex-start;gap:8px;}
+  .cmd-text{flex:1;color:#e0e8f0;word-break:break-all;white-space:pre-wrap;}
+  .cmd-text .var{color:#ff6b35;border-bottom:1px dashed rgba(255,107,53,.4);}
+  .cmd-text .flag{color:#7b8cde;}
+  .cmd-text mark{background:rgba(232,197,71,.25);color:#e8c547;border-radius:2px;}
+  .cmd-note{color:var(--dim);font-size:10px;min-width:130px;text-align:right;padding-top:1px;flex-shrink:0;}
+  .copy-btn{background:none;border:none;color:var(--dim);cursor:pointer;padding:0 2px;font-size:11px;transition:color .15s;flex-shrink:0;}
+  .copy-btn:hover{color:#e8c547;}
+  .copy-btn.copied{color:#e8c547;}
+  .var-form{display:none;margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.3);border-radius:4px;border:1px solid var(--border);}
+  .cmd.expanded .var-form{display:block;}
+  .var-fields{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .var-field{display:flex;align-items:center;gap:4px;}
+  .var-label{color:#ff6b35;font-size:11px;white-space:nowrap;}
+  .var-input{background:#0a0c0f;border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 6px;width:120px;outline:none;transition:border-color .15s;}
+  .var-input:focus{border-color:#ff6b35;}
+  .var-paste-btn{background:none;border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;font-size:10px;padding:2px 5px;transition:all .15s;}
+  .var-paste-btn:hover{border-color:#e8c547;color:#e8c547;}
+  .form-actions{display:flex;gap:6px;align-items:center;}
+  .form-copy-btn{background:rgba(232,197,71,.1);border:1px solid rgba(232,197,71,.3);border-radius:3px;color:#e8c547;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 10px;transition:all .15s;}
+  .form-copy-btn:hover{background:rgba(232,197,71,.2);}
+  .form-copy-btn.copied{background:rgba(232,197,71,.2);color:#fff;}
+  .form-reset-btn{background:none;border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;font-size:11px;padding:4px 8px;transition:all .15s;}
+  .form-reset-btn:hover{border-color:var(--dim);color:var(--text);}
+  .preview-text{flex:1;color:var(--dim);font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>SQL MITSUKETE++COPIPE</h1>
+  <div class="search-wrap"><input type="text" id="search" placeholder="SQL文・注釈・セクションを検索..." autocomplete="off" spellcheck="false"></div>
+</div>
+<div class="no-results" id="noResults">一致するSQL文が見つかりません</div>
+<div class="grid" id="grid"></div>
+<script>
+const data = [
+  { name: "SELECT (基本)", groups: [
+    { label: "基本クエリ", cmds: [
+      { cmd: "SELECT * FROM <TABLE>", note: "全列取得" },
+      { cmd: "SELECT <COL1>, <COL2> FROM <TABLE>", note: "列指定" },
+      { cmd: "SELECT DISTINCT <COL> FROM <TABLE>", note: "重複除外" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> = '<VAL>'", note: "条件指定" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> LIKE '%<PATTERN>%'", note: "部分一致" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> IN ('<V1>', '<V2>')", note: "IN句" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> BETWEEN <MIN> AND <MAX>", note: "範囲指定" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> IS NULL", note: "NULL検索" },
+    ]},
+    { label: "ソート / ページング", cmds: [
+      { cmd: "SELECT * FROM <TABLE> ORDER BY <COL> ASC", note: "昇順ソート" },
+      { cmd: "SELECT * FROM <TABLE> ORDER BY <COL> DESC", note: "降順ソート" },
+      { cmd: "SELECT * FROM <TABLE> LIMIT <N>", note: "件数制限(MySQL)" },
+      { cmd: "SELECT * FROM <TABLE> LIMIT <N> OFFSET <M>", note: "オフセット指定" },
+      { cmd: "SELECT * FROM <TABLE> FETCH FIRST <N> ROWS ONLY", note: "件数制限(標準SQL)" },
+    ]},
+    { label: "エイリアス / 式", cmds: [
+      { cmd: "SELECT <COL> AS <ALIAS> FROM <TABLE>", note: "列エイリアス" },
+      { cmd: "SELECT <TABLE> AS <ALIAS> FROM <TABLE> <ALIAS>", note: "テーブルエイリアス" },
+      { cmd: "SELECT <COL1> || ' ' || <COL2> AS full_name FROM <TABLE>", note: "文字列連結(標準)" },
+      { cmd: "SELECT CONCAT(<COL1>, ' ', <COL2>) AS full_name FROM <TABLE>", note: "文字列連結(MySQL)" },
+    ]},
+  ]},
+  { name: "JOIN", groups: [
+    { label: "INNER / OUTER JOIN", cmds: [
+      { cmd: "SELECT * FROM <T1> INNER JOIN <T2> ON <T1>.<COL> = <T2>.<COL>", note: "内部結合" },
+      { cmd: "SELECT * FROM <T1> LEFT JOIN <T2> ON <T1>.<COL> = <T2>.<COL>", note: "左外部結合" },
+      { cmd: "SELECT * FROM <T1> RIGHT JOIN <T2> ON <T1>.<COL> = <T2>.<COL>", note: "右外部結合" },
+      { cmd: "SELECT * FROM <T1> FULL OUTER JOIN <T2> ON <T1>.<COL> = <T2>.<COL>", note: "完全外部結合(PG)" },
+      { cmd: "SELECT * FROM <T1> CROSS JOIN <T2>", note: "交差結合" },
+    ]},
+    { label: "Self / Multi Join", cmds: [
+      { cmd: "SELECT a.<COL>, b.<COL> FROM <TABLE> a JOIN <TABLE> b ON a.<FK> = b.<PK>", note: "自己結合" },
+      { cmd: "SELECT * FROM <T1> JOIN <T2> ON <T1>.<C1> = <T2>.<C1> JOIN <T3> ON <T2>.<C2> = <T3>.<C2>", note: "3テーブル結合" },
+      { cmd: "SELECT * FROM <T1> JOIN <T2> USING (<COL>)", note: "USING句(同名列)" },
+      { cmd: "SELECT * FROM <T1> NATURAL JOIN <T2>", note: "自然結合" },
+    ]},
+  ]},
+  { name: "集約 / GROUP BY", groups: [
+    { label: "集約関数", cmds: [
+      { cmd: "SELECT COUNT(*) FROM <TABLE>", note: "行数カウント" },
+      { cmd: "SELECT COUNT(DISTINCT <COL>) FROM <TABLE>", note: "ユニーク数" },
+      { cmd: "SELECT SUM(<COL>) FROM <TABLE>", note: "合計" },
+      { cmd: "SELECT AVG(<COL>) FROM <TABLE>", note: "平均" },
+      { cmd: "SELECT MAX(<COL>), MIN(<COL>) FROM <TABLE>", note: "最大/最小" },
+    ]},
+    { label: "GROUP BY / HAVING", cmds: [
+      { cmd: "SELECT <COL>, COUNT(*) FROM <TABLE> GROUP BY <COL>", note: "グループ別集計" },
+      { cmd: "SELECT <COL>, SUM(<VAL_COL>) FROM <TABLE> GROUP BY <COL> HAVING SUM(<VAL_COL>) > <N>", note: "集計結果フィルタ" },
+      { cmd: "SELECT <COL>, COUNT(*) AS cnt FROM <TABLE> GROUP BY <COL> ORDER BY cnt DESC", note: "集計+ソート" },
+      { cmd: "SELECT YEAR(<DATE_COL>), MONTH(<DATE_COL>), COUNT(*) FROM <TABLE> GROUP BY YEAR(<DATE_COL>), MONTH(<DATE_COL>)", note: "年月別集計" },
+    ]},
+    { label: "Window 関数", cmds: [
+      { cmd: "SELECT <COL>, ROW_NUMBER() OVER (ORDER BY <COL>) FROM <TABLE>", note: "行番号" },
+      { cmd: "SELECT <COL>, RANK() OVER (ORDER BY <COL> DESC) FROM <TABLE>", note: "ランク" },
+      { cmd: "SELECT <COL>, SUM(<VAL>) OVER (PARTITION BY <GRP> ORDER BY <COL>) FROM <TABLE>", note: "累積合計" },
+      { cmd: "SELECT <COL>, LAG(<COL>) OVER (ORDER BY <COL>) FROM <TABLE>", note: "前の行の値" },
+      { cmd: "SELECT <COL>, LEAD(<COL>) OVER (ORDER BY <COL>) FROM <TABLE>", note: "次の行の値" },
+    ]},
+  ]},
+  { name: "サブクエリ / CTE", groups: [
+    { label: "サブクエリ", cmds: [
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> IN (SELECT <COL> FROM <T2>)", note: "INサブクエリ" },
+      { cmd: "SELECT * FROM <TABLE> WHERE EXISTS (SELECT 1 FROM <T2> WHERE <T2>.<COL> = <TABLE>.<COL>)", note: "EXISTSサブクエリ" },
+      { cmd: "SELECT * FROM <TABLE> WHERE <COL> > (SELECT AVG(<COL>) FROM <TABLE>)", note: "スカラサブクエリ" },
+      { cmd: "SELECT * FROM (SELECT <COL>, COUNT(*) AS cnt FROM <TABLE> GROUP BY <COL>) sub WHERE cnt > <N>", note: "FROM句サブクエリ" },
+    ]},
+    { label: "CTE (WITH句)", cmds: [
+      { cmd: "WITH cte AS (SELECT <COL> FROM <TABLE> WHERE <COND>) SELECT * FROM cte", note: "基本CTE" },
+      { cmd: "WITH c1 AS (SELECT ...), c2 AS (SELECT ... FROM c1) SELECT * FROM c2", note: "連鎖CTE" },
+      { cmd: "WITH RECURSIVE tree AS (\n  SELECT <COL>, 1 AS depth FROM <TABLE> WHERE <PARENT> IS NULL\n  UNION ALL\n  SELECT t.<COL>, tree.depth + 1 FROM <TABLE> t JOIN tree ON t.<PARENT> = tree.<PK>\n) SELECT * FROM tree", note: "再帰CTE(ツリー探索)" },
+    ]},
+  ]},
+  { name: "INSERT / UPDATE / DELETE", groups: [
+    { label: "INSERT", cmds: [
+      { cmd: "INSERT INTO <TABLE> (<COL1>, <COL2>) VALUES ('<V1>', '<V2>')", note: "1行挿入" },
+      { cmd: "INSERT INTO <TABLE> (<COL1>, <COL2>) VALUES ('<V1>', '<V2>'), ('<V3>', '<V4>')", note: "複数行挿入" },
+      { cmd: "INSERT INTO <TABLE> SELECT * FROM <T2>", note: "SELECTから挿入" },
+      { cmd: "INSERT INTO <TABLE> (<COL1>, <COL2>) VALUES ('<V1>', '<V2>') ON DUPLICATE KEY UPDATE <COL2> = '<V2>'", note: "UPSERT(MySQL)" },
+      { cmd: "INSERT INTO <TABLE> (<COL1>, <COL2>) VALUES ('<V1>', '<V2>') ON CONFLICT (<COL1>) DO UPDATE SET <COL2> = '<V2>'", note: "UPSERT(PG)" },
+    ]},
+    { label: "UPDATE", cmds: [
+      { cmd: "UPDATE <TABLE> SET <COL> = '<VAL>' WHERE <COND>", note: "行更新" },
+      { cmd: "UPDATE <TABLE> SET <COL1> = '<V1>', <COL2> = '<V2>' WHERE <COND>", note: "複数列更新" },
+      { cmd: "UPDATE <T1> JOIN <T2> ON <T1>.<COL> = <T2>.<COL> SET <T1>.<C> = <T2>.<C>", note: "JOIN更新(MySQL)" },
+      { cmd: "UPDATE <TABLE> SET <COL> = '<VAL>' FROM <T2> WHERE <TABLE>.<COL> = <T2>.<COL>", note: "FROM句更新(PG)" },
+    ]},
+    { label: "DELETE / TRUNCATE", cmds: [
+      { cmd: "DELETE FROM <TABLE> WHERE <COND>", note: "条件付き削除" },
+      { cmd: "DELETE FROM <TABLE>", note: "全行削除(ログあり)" },
+      { cmd: "TRUNCATE TABLE <TABLE>", note: "全行削除(高速/ログ無)" },
+      { cmd: "DELETE t1 FROM <T1> t1 JOIN <T2> t2 ON t1.<COL> = t2.<COL>", note: "JOIN削除(MySQL)" },
+    ]},
+  ]},
+  { name: "DDL (テーブル定義)", groups: [
+    { label: "CREATE TABLE", cmds: [
+      { cmd: "CREATE TABLE <TABLE> (\n  id INT PRIMARY KEY AUTO_INCREMENT,\n  <COL> VARCHAR(<N>) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)", note: "テーブル作成(MySQL)" },
+      { cmd: "CREATE TABLE <TABLE> (\n  id SERIAL PRIMARY KEY,\n  <COL> VARCHAR(<N>) NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW()\n)", note: "テーブル作成(PG)" },
+      { cmd: "CREATE TABLE IF NOT EXISTS <TABLE> (<COL> <TYPE>)", note: "存在チェック付き" },
+      { cmd: "CREATE TABLE <NEW_TABLE> AS SELECT * FROM <TABLE>", note: "既存テーブルからコピー" },
+      { cmd: "CREATE TEMPORARY TABLE <TABLE> (<COL> <TYPE>)", note: "一時テーブル" },
+    ]},
+    { label: "ALTER TABLE", cmds: [
+      { cmd: "ALTER TABLE <TABLE> ADD COLUMN <COL> <TYPE>", note: "列追加" },
+      { cmd: "ALTER TABLE <TABLE> DROP COLUMN <COL>", note: "列削除" },
+      { cmd: "ALTER TABLE <TABLE> MODIFY COLUMN <COL> <TYPE>", note: "列型変更(MySQL)" },
+      { cmd: "ALTER TABLE <TABLE> ALTER COLUMN <COL> TYPE <TYPE>", note: "列型変更(PG)" },
+      { cmd: "ALTER TABLE <TABLE> RENAME COLUMN <OLD> TO <NEW>", note: "列名変更" },
+      { cmd: "ALTER TABLE <TABLE> RENAME TO <NEW_TABLE>", note: "テーブル名変更" },
+    ]},
+    { label: "DROP / その他", cmds: [
+      { cmd: "DROP TABLE <TABLE>", note: "テーブル削除" },
+      { cmd: "DROP TABLE IF EXISTS <TABLE>", note: "存在チェック付き削除" },
+      { cmd: "SHOW TABLES", note: "テーブル一覧(MySQL)" },
+      { cmd: "\\dt", note: "テーブル一覧(PG)" },
+      { cmd: "DESCRIBE <TABLE>", note: "テーブル構造(MySQL)" },
+      { cmd: "\\d <TABLE>", note: "テーブル構造(PG)" },
+    ]},
+  ]},
+  { name: "INDEX / 制約", groups: [
+    { label: "インデックス", cmds: [
+      { cmd: "CREATE INDEX <IDX> ON <TABLE> (<COL>)", note: "インデックス作成" },
+      { cmd: "CREATE UNIQUE INDEX <IDX> ON <TABLE> (<COL>)", note: "ユニークインデックス" },
+      { cmd: "CREATE INDEX <IDX> ON <TABLE> (<COL1>, <COL2>)", note: "複合インデックス" },
+      { cmd: "DROP INDEX <IDX> ON <TABLE>", note: "インデックス削除(MySQL)" },
+      { cmd: "DROP INDEX <IDX>", note: "インデックス削除(PG)" },
+      { cmd: "SHOW INDEX FROM <TABLE>", note: "インデックス一覧(MySQL)" },
+    ]},
+    { label: "制約", cmds: [
+      { cmd: "ALTER TABLE <TABLE> ADD CONSTRAINT <NAME> PRIMARY KEY (<COL>)", note: "主キー追加" },
+      { cmd: "ALTER TABLE <TABLE> ADD CONSTRAINT <NAME> UNIQUE (<COL>)", note: "ユニーク制約追加" },
+      { cmd: "ALTER TABLE <TABLE> ADD CONSTRAINT <NAME> FOREIGN KEY (<COL>) REFERENCES <T2>(<COL2>)", note: "外部キー追加" },
+      { cmd: "ALTER TABLE <TABLE> ADD CONSTRAINT <NAME> CHECK (<COL> > 0)", note: "チェック制約" },
+      { cmd: "ALTER TABLE <TABLE> DROP CONSTRAINT <NAME>", note: "制約削除" },
+      { cmd: "ALTER TABLE <TABLE> ALTER COLUMN <COL> SET NOT NULL", note: "NOT NULL追加(PG)" },
+    ]},
+  ]},
+  { name: "ユーザ / 権限", groups: [
+    { label: "ユーザ管理(MySQL)", cmds: [
+      { cmd: "CREATE USER '<USER>'@'<HOST>' IDENTIFIED BY '<PASS>'", note: "ユーザ作成" },
+      { cmd: "ALTER USER '<USER>'@'<HOST>' IDENTIFIED BY '<NEWPASS>'", note: "パスワード変更" },
+      { cmd: "DROP USER '<USER>'@'<HOST>'", note: "ユーザ削除" },
+      { cmd: "SELECT user, host FROM mysql.user", note: "ユーザ一覧" },
+    ]},
+    { label: "ユーザ管理(PostgreSQL)", cmds: [
+      { cmd: "CREATE ROLE <USER> WITH LOGIN PASSWORD '<PASS>'", note: "ロール作成" },
+      { cmd: "ALTER ROLE <USER> WITH PASSWORD '<NEWPASS>'", note: "パスワード変更" },
+      { cmd: "DROP ROLE <USER>", note: "ロール削除" },
+      { cmd: "\\du", note: "ロール一覧" },
+    ]},
+    { label: "権限", cmds: [
+      { cmd: "GRANT ALL PRIVILEGES ON <DB>.* TO '<USER>'@'<HOST>'", note: "全権限付与(MySQL)" },
+      { cmd: "GRANT SELECT, INSERT ON <TABLE> TO <USER>", note: "テーブル権限付与" },
+      { cmd: "REVOKE ALL PRIVILEGES ON <DB>.* FROM '<USER>'@'<HOST>'", note: "権限取消(MySQL)" },
+      { cmd: "GRANT ALL PRIVILEGES ON DATABASE <DB> TO <USER>", note: "DB権限付与(PG)" },
+      { cmd: "SHOW GRANTS FOR '<USER>'@'<HOST>'", note: "権限確認(MySQL)" },
+      { cmd: "FLUSH PRIVILEGES", note: "権限反映(MySQL)" },
+    ]},
+  ]},
+  { name: "バックアップ / 運用", groups: [
+    { label: "MySQL", cmds: [
+      { cmd: "mysqldump -u <USER> -p <DB> > <FILE>.sql", note: "DBダンプ" },
+      { cmd: "mysqldump -u <USER> -p <DB> <TABLE> > <FILE>.sql", note: "テーブルダンプ" },
+      { cmd: "mysqldump -u <USER> -p --all-databases > <FILE>.sql", note: "全DBダンプ" },
+      { cmd: "mysql -u <USER> -p <DB> < <FILE>.sql", note: "ダンプリストア" },
+      { cmd: "SHOW PROCESSLIST", note: "実行中クエリ一覧" },
+      { cmd: "SHOW VARIABLES LIKE '%<KEYWORD>%'", note: "設定値検索" },
+    ]},
+    { label: "PostgreSQL", cmds: [
+      { cmd: "pg_dump -U <USER> <DB> > <FILE>.sql", note: "DBダンプ" },
+      { cmd: "pg_dump -U <USER> -t <TABLE> <DB> > <FILE>.sql", note: "テーブルダンプ" },
+      { cmd: "pg_dumpall -U <USER> > <FILE>.sql", note: "全DBダンプ" },
+      { cmd: "psql -U <USER> <DB> < <FILE>.sql", note: "ダンプリストア" },
+      { cmd: "SELECT * FROM pg_stat_activity", note: "実行中クエリ一覧" },
+      { cmd: "SELECT pg_size_pretty(pg_database_size('<DB>'))", note: "DBサイズ確認" },
+    ]},
+    { label: "パフォーマンス", cmds: [
+      { cmd: "EXPLAIN SELECT * FROM <TABLE> WHERE <COND>", note: "実行計画" },
+      { cmd: "EXPLAIN ANALYZE SELECT * FROM <TABLE> WHERE <COND>", note: "実測付き実行計画" },
+      { cmd: "ANALYZE TABLE <TABLE>", note: "統計情報更新(MySQL)" },
+      { cmd: "ANALYZE <TABLE>", note: "統計情報更新(PG)" },
+      { cmd: "SHOW TABLE STATUS LIKE '<TABLE>'", note: "テーブル統計(MySQL)" },
+    ]},
+  ]},
+  { name: "便利関数", groups: [
+    { label: "NULL / 条件", cmds: [
+      { cmd: "SELECT COALESCE(<COL>, '<DEFAULT>') FROM <TABLE>", note: "NULL時デフォルト値" },
+      { cmd: "SELECT IFNULL(<COL>, '<DEFAULT>') FROM <TABLE>", note: "NULL時デフォルト(MySQL)" },
+      { cmd: "SELECT NULLIF(<COL1>, <COL2>) FROM <TABLE>", note: "等しければNULL" },
+      { cmd: "SELECT CASE WHEN <COND1> THEN '<R1>' WHEN <COND2> THEN '<R2>' ELSE '<R3>' END FROM <TABLE>", note: "CASE式" },
+      { cmd: "SELECT CASE <COL> WHEN '<V1>' THEN '<R1>' WHEN '<V2>' THEN '<R2>' ELSE '<R3>' END FROM <TABLE>", note: "簡略CASE式" },
+    ]},
+    { label: "文字列関数", cmds: [
+      { cmd: "SELECT LENGTH(<COL>) FROM <TABLE>", note: "文字列長" },
+      { cmd: "SELECT UPPER(<COL>), LOWER(<COL>) FROM <TABLE>", note: "大文字/小文字変換" },
+      { cmd: "SELECT TRIM(<COL>) FROM <TABLE>", note: "両端空白除去" },
+      { cmd: "SELECT SUBSTRING(<COL>, <START>, <LEN>) FROM <TABLE>", note: "部分文字列" },
+      { cmd: "SELECT REPLACE(<COL>, '<OLD>', '<NEW>') FROM <TABLE>", note: "文字列置換" },
+      { cmd: "SELECT REGEXP_REPLACE(<COL>, '<PATTERN>', '<REPLACE>') FROM <TABLE>", note: "正規表現置換" },
+    ]},
+    { label: "日付 / 型変換", cmds: [
+      { cmd: "SELECT NOW()", note: "現在日時" },
+      { cmd: "SELECT CURRENT_DATE", note: "現在日付" },
+      { cmd: "SELECT DATE_FORMAT(<COL>, '%Y-%m-%d') FROM <TABLE>", note: "日付書式(MySQL)" },
+      { cmd: "SELECT TO_CHAR(<COL>, 'YYYY-MM-DD') FROM <TABLE>", note: "日付書式(PG)" },
+      { cmd: "SELECT DATEDIFF(<COL1>, <COL2>) FROM <TABLE>", note: "日数差(MySQL)" },
+      { cmd: "SELECT <COL1> - <COL2> FROM <TABLE>", note: "日数差(PG)" },
+      { cmd: "SELECT CAST(<COL> AS <TYPE>) FROM <TABLE>", note: "型変換" },
+    ]},
+  ]},
+];
+
+// ── helpers ──────────────────────────────────────────────
+function extractVarTokens(cmd) {
+  const counts = {};
+  return [...cmd.matchAll(/<([^>\n]+)>/g)].map(m => {
+    const name = m[1];
+    counts[name] = (counts[name] || 0);
+    return { name, idx: counts[name]++ };
+  });
+}
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function renderCmdText(raw, query) {
+  let s = escHtml(raw);
+  s = s.replace(/(&lt;)([^&\n]+)(&gt;)/g, (_, a, v, b) => `${a}<span class="var">${v}</span>${b}`);
+  if (query) {
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    s = s.replace(re, '<mark>$1</mark>');
+  }
+  return s;
+}
+function buildVarForm(rawCmd) {
+  const tokens = extractVarTokens(rawCmd);
+  if (!tokens.length) return null;
+  const form = document.createElement('div'); form.className = 'var-form';
+  const fields = document.createElement('div'); fields.className = 'var-fields';
+  const inputs = {};
+  tokens.forEach(({ name, idx }) => {
+    const key = `${name}::${idx}`;
+    const cnt = tokens.filter(t => t.name === name).length;
+    const label = cnt > 1 ? `<${name}> ${idx+1}` : `<${name}>`;
+    const wrap = document.createElement('div'); wrap.className = 'var-field';
+    const lbl = document.createElement('span'); lbl.className = 'var-label'; lbl.textContent = label;
+    const inp = document.createElement('input'); inp.className = 'var-input'; inp.placeholder = name; inp.autocomplete = 'off'; inp.spellcheck = false;
+    inputs[key] = inp;
+    const paste = document.createElement('button'); paste.className = 'var-paste-btn'; paste.textContent = '📋'; paste.title = 'クリップボードから貼り付け';
+    paste.addEventListener('click', async e => {
+      e.stopPropagation();
+      try { inp.value = (await navigator.clipboard.readText()).trim(); inp.dispatchEvent(new Event('input')); } catch { inp.focus(); }
+    });
+    wrap.appendChild(lbl); wrap.appendChild(inp); wrap.appendChild(paste);
+    fields.appendChild(wrap);
+  });
+  const actions = document.createElement('div'); actions.className = 'form-actions';
+  const preview = document.createElement('span'); preview.className = 'preview-text';
+  const copyBtn = document.createElement('button'); copyBtn.className = 'form-copy-btn'; copyBtn.textContent = 'コピー';
+  const resetBtn = document.createElement('button'); resetBtn.className = 'form-reset-btn'; resetBtn.textContent = 'リセット';
+  function buildResult() {
+    const c = {};
+    return rawCmd.replace(/<([^>\n]+)>/g, (_, name) => {
+      c[name] = (c[name]||0);
+      const val = (inputs[`${name}::${c[name]++}`]||{}).value?.trim();
+      return val || `<${name}>`;
+    });
+  }
+  function updatePreview() { preview.textContent = buildResult(); }
+  Object.values(inputs).forEach(i => i.addEventListener('input', updatePreview));
+  updatePreview();
+  copyBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(buildResult()).then(() => {
+      copyBtn.textContent = '✓ コピー済'; copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'コピー'; copyBtn.classList.remove('copied'); }, 1200);
+    });
+  });
+  resetBtn.addEventListener('click', e => { e.stopPropagation(); Object.values(inputs).forEach(i => i.value=''); updatePreview(); });
+  actions.appendChild(preview); actions.appendChild(resetBtn); actions.appendChild(copyBtn);
+  form.addEventListener('click', e => e.stopPropagation());
+  form.addEventListener('mousedown', e => e.stopPropagation());
+  form.appendChild(fields); form.appendChild(actions);
+  return form;
+}
+
+// ── render ────────────────────────────────────────────────
+const grid = document.getElementById('grid');
+const allCmdEls = [];
+data.forEach((section, si) => {
+  const secEl = document.createElement('div'); secEl.className = 'section';
+  secEl.innerHTML = `<div class="section-header">${section.name}</div>`;
+  const body = document.createElement('div'); body.className = 'section-body';
+  section.groups.forEach((g, gi) => {
+    if (gi > 0) { const d = document.createElement('div'); d.className = 'divider'; body.appendChild(d); }
+    const groupEl = document.createElement('div'); groupEl.className = 'group';
+    groupEl.innerHTML = `<div class="group-label">${g.label}</div>`;
+    g.cmds.forEach(c => {
+      const cmdEl = document.createElement('div'); cmdEl.className = 'cmd';
+      const hasVars = extractVarTokens(c.cmd).length > 0;
+      if (hasVars) cmdEl.classList.add('has-vars');
+      const row = document.createElement('div'); row.className = 'cmd-row';
+      const txtEl = document.createElement('div'); txtEl.className = 'cmd-text'; txtEl.innerHTML = renderCmdText(c.cmd, '');
+      const noteEl = document.createElement('div'); noteEl.className = 'cmd-note'; noteEl.textContent = c.note;
+      const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.textContent = '⎘'; copyBtn.title = 'コピー';
+      row.appendChild(txtEl); row.appendChild(noteEl); row.appendChild(copyBtn);
+      cmdEl.appendChild(row);
+      if (hasVars) {
+        cmdEl.appendChild(buildVarForm(c.cmd));
+        cmdEl.addEventListener('click', e => { if (e.target === copyBtn) return; cmdEl.classList.toggle('expanded'); });
+      }
+      copyBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(c.cmd).then(() => {
+          copyBtn.textContent = '✓'; copyBtn.classList.add('copied');
+          setTimeout(() => { copyBtn.textContent = '⎘'; copyBtn.classList.remove('copied'); }, 1200);
+        });
+      });
+      groupEl.appendChild(cmdEl);
+      allCmdEls.push({ el: cmdEl, rawCmd: c.cmd, rawNote: c.note, txtEl });
+    });
+    body.appendChild(groupEl);
+  });
+  secEl.appendChild(body); grid.appendChild(secEl);
+});
+
+// ── search ────────────────────────────────────────────────
+const searchInput = document.getElementById('search');
+const noResults = document.getElementById('noResults');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  allCmdEls.forEach(({ el, rawCmd, rawNote, txtEl }) => {
+    if (!q) { el.classList.remove('hidden'); txtEl.innerHTML = renderCmdText(rawCmd, ''); return; }
+    const match = rawCmd.toLowerCase().includes(q) || rawNote.toLowerCase().includes(q);
+    el.classList.toggle('hidden', !match);
+    txtEl.innerHTML = renderCmdText(rawCmd, match ? q : '');
+  });
+  document.querySelectorAll('.group').forEach(g => g.classList.toggle('hidden', ![...g.querySelectorAll('.cmd')].some(c => !c.classList.contains('hidden'))));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('hidden', ![...s.querySelectorAll('.cmd')].some(c => !c.classList.contains('hidden'))));
+  noResults.style.display = [...document.querySelectorAll('.section')].some(s => !s.classList.contains('hidden')) ? 'none' : 'block';
+});
+</script>
+</body>
+</html>
